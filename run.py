@@ -12,15 +12,17 @@ def download_filters(urls):
         try:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
-            unique_lines.update(
-                line.strip() for line in response.text.splitlines() if not line.startswith('!')
-            )
+            print(f"Downloading {url} - Status Code: {response.status_code}")
+            print(f"Original line count: {len(response.text.splitlines())}")
+            filtered_lines = [line.strip() for line in response.text.splitlines() if line.strip() and not line.startswith('!')]
+            print(f"Filtered line count: {len(filtered_lines)}")
+            unique_lines.update(filtered_lines)
         except requests.RequestException as e:
             print(f"Download failed for {url}: {e}")
 
 def save_to_file(filename):
     with open(filename, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(unique_lines) + '\n')
+        f.write('\n'.join(sorted(unique_lines)) + '\n')
 
 def main():
     download_filters(urls)
