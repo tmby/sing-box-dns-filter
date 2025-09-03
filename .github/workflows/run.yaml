@@ -1,101 +1,45 @@
-name: Build and Convert Filters
+name: Build And Convert Filters
 
 on:
-  workflow_dispatch: # 允许手动触发
-  schedule:
-    - cron: '0 0 * * *' # 每天 UTC 时间 0 点运行
+  workflow_dispatch:
   push:
     branches:
-      - main # main 分支有推送时运行
+      - main
+  schedule:
+    - cron: '0 0 * * *'
 
 jobs:
   build:
+    name: Build And Convert
     runs-on: ubuntu-latest
-    permissions: # 需要内容写入权限来提交更改
-      contents: write
-    outputs: # 输出 sing-box 版本号供 commit message 使用
-      sing_box_version: ${{ steps.get_latest_release.outputs.result }}
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Set up Python
+      - name: Set Up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x' # 使用推荐的 setup-python action
+          python-version: '3.x'
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip # pip 缓存路径
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }} # 如果有 requirements.txt，用它生成 key
-          restore-keys: | # Fallback keys
-            ${{ runner.os }}-pip-
-        # 注意：如果你的 Python 脚本没有 requirements.txt，可以基于脚本内容 hash 或固定 key
-        # 例如: key: ${{ runner.os }}-pip-${{ hashFiles('run.py') }}
-        # 或者简单点: key: ${{ runner.os }}-pip-requests
+      - name: Install Dependencies
+        run: pip install requests
 
-      - name: Install Python Dependencies
-        run: python -m pip install requests # 直接安装 requests
+      - name: Install Sing-Box
+        run: curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
 
-      - name: Get Latest Sing-box Release Tag
-        id: get_latest_release
-        uses: actions/github-script@v7 # 更新到 v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const result = await github.rest.repos.getLatestRelease({
-              owner: 'SagerNet',
-              repo: 'sing-box',
-            });
-            console.log(`Latest Sing-box version: ${result.data.tag_name}`);
-            return result.data.tag_name;
+      - name: Run Merge Rules Script
+        run: python run.py
 
-      # 将版本信息设置为环境变量，方便后续步骤使用
-      - name: Set Sing-box Environment Variables
-        id: set_env
+      - name: Convert Rules To SRS
+        run: sing-box rule-set convert --type adguard merged_rules.txt --output geosite-dnsblock.srs
+
+      - name: Commit And Push SRS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          SING_BOX_TAG="${{ steps.get_latest_release.outputs.result }}"
-          # 去掉 'v' 前缀
-          SING_BOX_VERSION="${SING_BOX_TAG#v}"
-          SING_BOX_DIR="sing-box-${SING_BOX_VERSION}-linux-amd64"
-          SING_BOX_ARCHIVE="sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz"
-          SING_BOX_URL="https://github.com/SagerNet/sing-box/releases/download/${SING_BOX_TAG}/${SING_BOX_ARCHIVE}"
-
-          echo "SING_BOX_TAG=${SING_BOX_TAG}" >> $GITHUB_ENV
-          echo "SING_BOX_VERSION=${SING_BOX_VERSION}" >> $GITHUB_ENV
-          echo "SING_BOX_DIR=${SING_BOX_DIR}" >> $GITHUB_ENV
-          echo "SING_BOX_ARCHIVE=${SING_BOX_ARCHIVE}" >> $GITHUB_ENV
-          echo "SING_BOX_URL=${SING_BOX_URL}" >> $GITHUB_ENV
-          echo "sing_box_path=${SING_BOX_DIR}/sing-box" >> $GITHUB_ENV # 导出可执行文件路径
-
-      - name: Download and Extract Sing-box
-        run: |
-          echo "Downloading Sing-box from ${{ env.SING_BOX_URL }}"
-          curl -fsSL -o "${{ env.SING_BOX_ARCHIVE }}" "${{ env.SING_BOX_URL }}"
-          echo "Extracting ${{ env.SING_BOX_ARCHIVE }}"
-          tar -xzf "${{ env.SING_BOX_ARCHIVE }}"
-          echo "Making sing-box executable"
-          chmod +x "${{ env.sing_box_path }}"
-          echo "Sing-box path: ${{ env.sing_box_path }}"
-          # 验证 sing-box 是否可用 (可选)
-          "${{ env.sing_box_path }}" version
-
-      - name: Run Python Script to Generate temp_filters.txt
-        run: python run.py # 脚本名假设为 run.py
-
-      - name: Convert Filters Using Sing-box
-        run: |
-          echo "Converting temp_filters.txt to geosite-dnsblock.srs using Sing-box ${{ env.SING_BOX_TAG }}"
-          "${{ env.sing_box_path }}" rule-set convert --type adguard --output geosite-dnsblock.srs ./temp_filters.txt
-
-      - name: Commit and Push geosite-dnsblock.srs
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update geosite-dnsblock.srs (sing-box ${{ steps.get_latest_release.outputs.result }})" # 使用 Action 输出的版本号
-          file_pattern: geosite-dnsblock.srs # 只提交这个文件
-          commit_user_name: github-actions[bot] # GITHUB_ACTOR
-          commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com # GITHUB_ACTOR_ID + @users.noreply.github.com
-          commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          push_options: '--force-with-lease' # 可选：如果需要强制推送（确保你知道风险）
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add geosite-dnsblock.srs
+          git commit -m "Update geosite-dnsblock.srs" || echo "No changes"
+          git push
