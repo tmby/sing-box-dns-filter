@@ -3,7 +3,7 @@ from time import sleep
 
 FILTER_URLS = [
     ("AdGuard", "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt"),
-    ("OISD", "https://small.oisd.nl"),
+    ("OISD", "https://big.oisd.nl"),
 ]
 
 all_rules = set()
