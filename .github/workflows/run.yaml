@@ -1,4 +1,4 @@
-name: Build And Convert Filters
+name: Build and Convert Filters
 
 on:
   workflow_dispatch:
@@ -10,31 +10,30 @@ on:
 
 jobs:
   build:
-    name: Build And Convert
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Set Up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install Dependencies
+      - name: Install pip dependencie
         run: pip install requests
 
-      - name: Install Sing-Box
+      - name: Install sing-box
         run: curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
 
-      - name: Run Merge Rules Script
+      - name: Run merge rules script
         run: python run.py
 
-      - name: Convert Rules To SRS
+      - name: Convert rules to srs
         run: sing-box rule-set convert --type adguard merged_rules.txt --output geosite-dnsblock.srs
 
-      - name: Commit And Push SRS
+      - name: Commit and push srs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
