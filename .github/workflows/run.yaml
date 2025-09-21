@@ -37,6 +37,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "BUILDTIME=$(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add geosite-dnsblock.srs
