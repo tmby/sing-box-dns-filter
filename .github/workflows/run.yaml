@@ -40,5 +40,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add geosite-dnsblock.srs
-          git commit -m "Update geosite-dnsblock.srs" || echo "No changes"
+          git commit -m "Released on ${{ env.BUILDTIME }}" || echo "No changes"
           git push
