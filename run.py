@@ -2,7 +2,7 @@ import requests
 from time import sleep
 
 FILTER_URLS = [
-    ("AdGuard", "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt"),
+    #("AdGuard", "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt"),
     ("OISD", "https://big.oisd.nl"),
 ]
 
