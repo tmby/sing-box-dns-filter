@@ -16,7 +16,7 @@ for name, url in FILTER_URLS:
             rules = {
                 line.strip()
                 for line in response.text.splitlines()
-                if line.strip() and not line.startswith(("!", "#"))
+                if line.strip() and not line.startswith(("[", "!", "#"))
             }
             all_rules |= rules
             print(f"{name}: {len(rules)} 条")
