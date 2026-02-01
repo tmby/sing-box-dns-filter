@@ -30,7 +30,7 @@ jobs:
         run: pip install requests
 
       - name: Install sing-box
-        run: curl -fsSL https://sing-box.app/install.sh | sh -s -- --version 1.12.17
+        run: curl -fsSL https://sing-box.app/install.sh | sh
 
       - name: Run merge rules script
         run: python run.py
